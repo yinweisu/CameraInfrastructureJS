@@ -36,11 +36,12 @@ class Room:
         elif attender == self.pusher:
             self.pusher = None
             leave_room(self.room_id)
-        if not self.viewer and not self.pusher:
-            del room_map[self.room_id]
     
     def ready(self):
         return self.viewer != None and self.pusher != None
+
+    def is_empty(self):
+        return not self.viewer and not self.pusher
 
 room_map = {}
 
@@ -72,6 +73,22 @@ def handle_join(data):
     room.join_room(attender)
     if room.ready:
         emit('ready', to=room.room_id, include_self=True)
+
+@socketio.on('leave')
+def handle_leave(data):
+    print('client left')
+    role = data['role'] # viewer or pusher
+    role = Role[role]
+    sid = request.sid
+    attender = Attender(role, sid)
+    room_id = data['room_id']
+    room = room_map.get(room_id, None)
+    if room:
+        room.leave_room(attender)
+        if room.is_empty(): 
+            del room_map[room.room_id]
+        else:
+            emit('peer_left', to=room.room_id, include_self=False)
 
 # Simply pass the data to the receiver
 @socketio.on('data')
