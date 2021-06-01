@@ -30,3 +30,4 @@ Offer includes a list of supported configurations for the connection, including 
 
 ### TURN Server
 
+TURN server is needed because most of the ip are hiding behind a firewall or NAT, which means their ip is not public accessible. TURN server is able to provide the public ip of the endpoint even though it's behind a firewall or NAT.
