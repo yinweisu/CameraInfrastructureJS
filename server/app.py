@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 from flask_socketio import SocketIO, emit
-from ./object import Role, Attender, Room
+from .object import Role, Attender, Room
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
