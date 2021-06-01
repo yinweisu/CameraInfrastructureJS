@@ -71,10 +71,14 @@ def handle_join(data):
         room_map[room_id] = room
     room.join_room(attender)
     if room.ready:
-        emit('ready', to=room.room_id)
-    else:
-        emit('not ready', to=room.room_id)
-    
+        emit('ready', to=room.room_id, include_self=True)
+
+# Simply pass the data to the receiver
+@socketio.on('data')
+def handle_data(data):
+    room_id = data['room_id']
+    if room_map.get(room_id, None):
+        emit('data', data, to=room_id, include_self=False)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
