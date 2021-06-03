@@ -35,8 +35,8 @@ def handle_join(data):
     if room.ready:
         emit('ready', to=room.room_id, include_self=True)
 
-@socketio.on('leave')
-def handle_leave(data):
+@socketio.on('disconnect')
+def handle_disconnect(data):
     print('client left')
     role = data['role'] # viewer or pusher
     role = Role[role]
