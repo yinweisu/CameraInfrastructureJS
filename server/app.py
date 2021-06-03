@@ -45,7 +45,8 @@ def handle_disconnect():
     if room:
         room.leave_room(sid)
         del client_to_room_map[sid]
-        if room.is_empty(): 
+        if room.is_empty():
+            print(f'empty room {room.room_id}')
             del room_map[room.room_id]
         else:
             emit('peer_left', to=room.room_id, include_self=False)

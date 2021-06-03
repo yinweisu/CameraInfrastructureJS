@@ -6,7 +6,7 @@ let socket = io(SIGNALING_SERVER_URL, { autoConnect: true });
 var peer_connection = null;
 
 var media_constraints = {
-    video: true,
+    video: { width: 1280, height: 720 }
 };
 
 function create_peer_connection() {
@@ -55,13 +55,16 @@ function handle_push_answer(sdp){
     peer_connection.setRemoteDescription(remote_description);
 }
 
-function handle_new_ice_candidate(sdp) {
-    var candidate = new RTCIceCandidate(sdp.candidate);
-    console.log('Adding received ICE candidate: ' + JSON.stringify(candidate));
-    peer_connection.addIceCandidate(candidate).catch(reportError);
+function handle_new_ice_candidate(candidate) {
+    if (candidate) {
+        var candidate = new RTCIceCandidate(candidate);
+        console.log('Adding received ICE candidate: ' + JSON.stringify(candidate));
+        peer_connection.addIceCandidate(candidate).catch(reportError);
+    }
 }
 
 function stop() {
+    console.log('stop pushing');
     var local_stream = document.getElementById('local_stream');
     if (peer_connection) {
         peer_connection.onnegotiationneeded = null;
@@ -110,13 +113,16 @@ socket.on('ready', () => {
     console.log('ready')
     create_peer_connection();
 
-    navigator.mediaDevices.getUserMedia(media_constraints)
-    .then(function(local_stream) {
-        console.log(local_stream)
-        document.getElementById('local_stream').srcObject = local_stream;
-        local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
-    })
-    .catch(handle_get_user_media_error);
+    console.log(document.getElementById('local_stream').srcObject);
+    if (document.getElementById('local_stream').srcObject == null) {
+        navigator.mediaDevices.getUserMedia(media_constraints)
+        .then(function(local_stream) {
+            console.log(local_stream)
+            document.getElementById('local_stream').srcObject = local_stream;
+            local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
+        })
+        .catch(handle_get_user_media_error);
+    }
 
 });
 
@@ -127,11 +133,12 @@ socket.on('peer_left', (data) => {
 socket.on('data', (data) => {
     const type = data.type;
     const sdp = data.sdp;
+    const candidate = data.candidate;
     switch (type) {
         case 'push_answer':
             handle_push_answer(sdp);
             break;
         case 'new_ice_candidate':
-            handle_new_ice_candidate(sdp);
+            handle_new_ice_candidate(candidate);
     }
 });

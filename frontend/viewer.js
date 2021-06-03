@@ -27,6 +27,7 @@ function handle_icecandidate(event) {
 
 function handle_ontrack(event) {
     console.log('Add track');
+    console.log('track active: ' + event.streams[0].active);
     document.getElementById('remote_stream').srcObject = event.streams[0];
 }
 
@@ -59,10 +60,12 @@ function handle_push_offer(sdp){
     })
 }
 
-function handle_new_ice_candidate(sdp) {
-    var candidate = new RTCIceCandidate(sdp.candidate);
-    console.log('Adding received ICE candidate: ' + JSON.stringify(candidate));
-    peer_connection.addIceCandidate(candidate).catch(reportError);
+function handle_new_ice_candidate(candidate) {
+    if (candidate) {
+        var candidate = new RTCIceCandidate(candidate);
+        console.log('Adding received ICE candidate: ' + JSON.stringify(candidate));
+        peer_connection.addIceCandidate(candidate).catch(reportError);
+    }
 }
 
 function stop() {
@@ -73,7 +76,7 @@ function stop() {
         peer_connection.oniceconnectionstatechange = null;
 
         if (remote_stream.srcObject) {
-            remote_stream.srcObject.getTracks().foreach(track => track.stop());
+            remote_stream.srcObject.getTracks().forEach(track => track.stop());
         }
 
         peer_connection.close();
@@ -106,11 +109,13 @@ socket.on('peer_left', (data) => {
 socket.on('data', (data) => {
     const type = data.type;
     const sdp = data.sdp;
+    const candidate = data.candidate;
+
     switch (type) {
         case 'push_offer':
             handle_push_offer(sdp);
             break;
         case 'new_ice_candidate':
-            handle_new_ice_candidate(sdp);
+            handle_new_ice_candidate(candidate);
     }
 });
