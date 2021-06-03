@@ -1,5 +1,5 @@
 from enum import Enum
-from flask_socketio import join_room, leave_room
+from flask_socketio import join_room, leave_room, close_room
 
 class Role(Enum):
     viewer = 1
@@ -25,14 +25,16 @@ class Room:
             self.pusher = attender
             join_room(self.room_id)
 
-    def leave_room(self, attender):
-        if attender == self.viewer:
+    def leave_room(self, sid):
+        if self.viewer and self.viewer.sid == sid:
             self.viewer = None
             leave_room(self.room_id)
-        elif attender == self.pusher:
+        elif self.pusher and self.pusher.sid == sid:
             self.pusher = None
             leave_room(self.room_id)
-    
+        if not self.pusher and not self.viewer:
+            close_room(self.room_id)
+
     def ready(self):
         return self.viewer != None and self.pusher != None
 

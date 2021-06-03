@@ -5,8 +5,6 @@ const room_id = '123';
 let socket = io(SIGNALING_SERVER_URL, { autoConnect: true });
 var peer_connection = null;
 
-let remote_stream_element = document.querySelector('remote_stream');
-
 function create_peer_connection() {
     if (peer_connection == null) {
         peer_connection = new RTCPeerConnection(PC_CONFIG);
@@ -29,7 +27,7 @@ function handle_icecandidate(event) {
 
 function handle_ontrack(event) {
     console.log('Add track');
-    remote_stream_element.srcObject = event.streams[0];
+    document.getElementById('remote_stream').srcObject = event.streams[0];
 }
 
 function handle_ice_connection_state_change(event) {
@@ -50,7 +48,7 @@ function handle_push_offer(sdp){
     var remote_description = new RTCSessionDescription(sdp);
     peer_connection.setRemoteDescription(remote_description).then(function() {
         return peer_connection.createAnswer();
-    }).then(function() {
+    }).then(function(answer) {
         return peer_connection.setLocalDescription(answer);
     }).then(function() {
         const data = {
@@ -62,23 +60,31 @@ function handle_push_offer(sdp){
 }
 
 function handle_new_ice_candidate(sdp) {
-    peer_connection.addIceCandidate(sdp.candidate)
+    var candidate = new RTCIceCandidate(sdp.candidate);
+    console.log('Adding received ICE candidate: ' + JSON.stringify(candidate));
+    peer_connection.addIceCandidate(candidate).catch(reportError);
 }
 
 function stop() {
+    var remote_stream = document.getElementById('remote_stream');
     if (peer_connection) {
         peer_connection.onicecandidate = null;
         peer_connection.onaddstream = null;
         peer_connection.oniceconnectionstatechange = null;
 
-        if (remote_stream_element.srcObject) {
-            remote_stream_element.srcObject.getTracks().foreach(track => track.stop());
+        if (remote_stream.srcObject) {
+            remote_stream.srcObject.getTracks().foreach(track => track.stop());
         }
 
         peer_connection.close();
         peer_connection = null;
     }
-    remote_stream_element.removeAttribute('srcObject');
+    remote_stream.removeAttribute('src');
+    remote_stream.removeAttribute('srcObject');
+}
+
+function reportError(error) {
+    console.log('Error: ' + error)
 }
 
 socket.on('connected', () => {
@@ -89,6 +95,7 @@ socket.on('connected', () => {
 });
 
 socket.on('ready', () => {
+    console.log('ready');
     create_peer_connection();
 });
 
@@ -101,7 +108,7 @@ socket.on('data', (data) => {
     const sdp = data.sdp;
     switch (type) {
         case 'push_offer':
-            hanle_push_offer(sdp);
+            handle_push_offer(sdp);
             break;
         case 'new_ice_candidate':
             handle_new_ice_candidate(sdp);

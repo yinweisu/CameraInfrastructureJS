@@ -1,11 +1,12 @@
 from flask import Flask, request, render_template
 from flask_socketio import SocketIO, emit
-from .object import Role, Attender, Room
+from object import Role, Attender, Room
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 room_map = {}
+client_to_room_map = {}
 
 # @app.route('/')
 # def index():
@@ -32,20 +33,18 @@ def handle_join(data):
         room = Room(room_id)
         room_map[room_id] = room
     room.join_room(attender)
-    if room.ready:
+    client_to_room_map[sid] = room
+    if room.ready():
         emit('ready', to=room.room_id, include_self=True)
 
 @socketio.on('disconnect')
-def handle_disconnect(data):
-    print('client left')
-    role = data['role'] # viewer or pusher
-    role = Role[role]
+def handle_disconnect():
     sid = request.sid
-    attender = Attender(role, sid)
-    room_id = data['room_id']
-    room = room_map.get(room_id, None)
+    print(f'client {sid} left')
+    room = client_to_room_map.get(sid, None)
     if room:
-        room.leave_room(attender)
+        room.leave_room(sid)
+        del client_to_room_map[sid]
         if room.is_empty(): 
             del room_map[room.room_id]
         else:
@@ -54,9 +53,11 @@ def handle_disconnect(data):
 # Simply pass the data to the receiver
 @socketio.on('data')
 def handle_data(data):
-    room_id = data['room_id']
-    if room_map.get(room_id, None):
-        emit('data', data, to=room_id, include_self=False)
+    sid = request.sid
+    room = client_to_room_map.get(sid, None)
+    print(data)
+    if room:
+        emit('data', data, to=room.room_id, include_self=False)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
