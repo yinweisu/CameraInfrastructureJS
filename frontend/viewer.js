@@ -123,9 +123,14 @@ socket.on('data', (data) => {
 
     switch (type) {
         case 'push_offer':
-            handle_push_offer(sdp);
+            if (sdp) {
+                handle_push_offer(sdp);
+            }
             break;
         case 'new_ice_candidate':
-            handle_new_ice_candidate(candidate);
+            if (candidate) {
+                handle_new_ice_candidate(candidate);
+            }
+            break;
     }
 });
