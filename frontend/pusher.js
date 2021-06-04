@@ -128,7 +128,9 @@ socket.on('ready', () => {
     navigator.mediaDevices.getUserMedia(media_constraints)
     .then(function(local_stream) {
         console.log(local_stream)
-        document.getElementById('local_stream').srcObject = local_stream;
+        if (document.getElementById('local_stream').srcObject == null) {
+            document.getElementById('local_stream').srcObject = local_stream;
+        }
         local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
     })
     .catch(handle_get_user_media_error);

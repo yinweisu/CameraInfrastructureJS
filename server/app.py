@@ -41,10 +41,10 @@ def handle_join(data):
 @socketio.on('disconnect')
 def handle_disconnect():
     sid = request.sid
-    print(f'client {sid} left')
     room = client_to_room_map.get(sid, None)
     if room:
         if room.leave_room(sid):
+            print(f'client {sid} left room {room}')
             del client_to_room_map[sid]
         if room.is_empty():
             print(f'empty room {room.room_id}')
