@@ -32,9 +32,10 @@ def handle_join(data):
     if not room:
         room = Room(room_id)
         room_map[room_id] = room
-    room.join_room(attender)
-    client_to_room_map[sid] = room
+    if room.join_room(attender):
+        client_to_room_map[sid] = room
     if room.ready():
+        print('room is ready')
         emit('ready', to=room.room_id, include_self=True)
 
 @socketio.on('disconnect')
@@ -43,12 +44,13 @@ def handle_disconnect():
     print(f'client {sid} left')
     room = client_to_room_map.get(sid, None)
     if room:
-        room.leave_room(sid)
-        del client_to_room_map[sid]
+        if room.leave_room(sid):
+            del client_to_room_map[sid]
         if room.is_empty():
             print(f'empty room {room.room_id}')
             del room_map[room.room_id]
         else:
+            print('send peer left signal')
             emit('peer_left', to=room.room_id, include_self=False)
 
 # Simply pass the data to the receiver
@@ -56,7 +58,6 @@ def handle_disconnect():
 def handle_data(data):
     sid = request.sid
     room = client_to_room_map.get(sid, None)
-    print(data)
     if room:
         emit('data', data, to=room.room_id, include_self=False)
 

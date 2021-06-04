@@ -24,6 +24,9 @@ class Room:
         elif attender.role == Role.pusher and not self.pusher:
             self.pusher = attender
             join_room(self.room_id)
+        else:
+            return False
+        return True
 
     def leave_room(self, sid):
         if self.viewer and self.viewer.sid == sid:
@@ -32,8 +35,11 @@ class Room:
         elif self.pusher and self.pusher.sid == sid:
             self.pusher = None
             leave_room(self.room_id)
+        else:
+            return False
         if not self.pusher and not self.viewer:
             close_room(self.room_id)
+        return True
 
     def ready(self):
         return self.viewer != None and self.pusher != None

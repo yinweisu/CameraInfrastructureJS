@@ -11,10 +11,12 @@ var media_constraints = {
 
 function create_peer_connection() {
     if (peer_connection == null) {
+        console.log('create new peer connection');
         peer_connection = new RTCPeerConnection(PC_CONFIG);
         peer_connection.onnegotiationneeded = handle_negotiation;
         peer_connection.onicecandidate = handle_icecandidate;
         peer_connection.oniceconnectionstatechange = handle_ice_connection_state_change;
+        peer_connection.onsignalingstatechange = handle_signal_state_change;
     }
 }
 
@@ -42,9 +44,19 @@ function handle_icecandidate(event) {
 }
 
 function handle_ice_connection_state_change(event) {
+    console.log('ICE state change');
     switch (peer_connection.iceConnectionState) {
         case 'closed':
         case 'failed':
+            stop();
+            break;
+    }
+}
+
+function handle_signal_state_change(event) {
+    console.log('Signal state change');
+    switch (peer_connection.signalingState) {
+        case 'closed':
             stop();
             break;
     }
@@ -70,16 +82,17 @@ function stop() {
         peer_connection.onnegotiationneeded = null;
         peer_connection.onicecandidate = null;
         peer_connection.oniceconnectionstatechange = null;
+        peer_connection.onsignalingstatechange = null;
 
-        if (local_stream.srcObject) {
-            local_stream.srcObject.getTracks().forEach(track => track.stop());
-        }
+        // if (local_stream.srcObject) {
+        //     local_stream.srcObject.getTracks().forEach(track => track.stop());
+        // }
 
         peer_connection.close();
         peer_connection = null;
     }
-    local_stream.removeAttribute('src');
-    local_stream.removeAttribute('srcObject');
+    // local_stream.removeAttribute('src');
+    // local_stream.removeAttribute('srcObject');
 }
 
 function handle_get_user_media_error(e) {
@@ -98,7 +111,7 @@ function handle_get_user_media_error(e) {
 }
 
 function reportError(error) {
-    console.log('Error: ' + error)
+    console.log('Error: ' + error);
 }
 
 socket.on('connected', () => {
@@ -110,23 +123,20 @@ socket.on('connected', () => {
 });
 
 socket.on('ready', () => {
-    console.log('ready')
+    console.log('ready');
     create_peer_connection();
-
-    console.log(document.getElementById('local_stream').srcObject);
-    if (document.getElementById('local_stream').srcObject == null) {
-        navigator.mediaDevices.getUserMedia(media_constraints)
-        .then(function(local_stream) {
-            console.log(local_stream)
-            document.getElementById('local_stream').srcObject = local_stream;
-            local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
-        })
-        .catch(handle_get_user_media_error);
-    }
+    navigator.mediaDevices.getUserMedia(media_constraints)
+    .then(function(local_stream) {
+        console.log(local_stream)
+        document.getElementById('local_stream').srcObject = local_stream;
+        local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
+    })
+    .catch(handle_get_user_media_error);
 
 });
 
 socket.on('peer_left', (data) => {
+    console.log('peer left');
     stop();
 });
 

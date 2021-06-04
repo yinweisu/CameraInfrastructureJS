@@ -10,6 +10,7 @@ function create_peer_connection() {
         peer_connection = new RTCPeerConnection(PC_CONFIG);
         peer_connection.onicecandidate = handle_icecandidate;
         peer_connection.ontrack = handle_ontrack;
+        peer_connection.onremovetrack = handle_onremovetrack;
         peer_connection.oniceconnectionstatechange = handle_ice_connection_state_change;
     }
 }
@@ -31,6 +32,15 @@ function handle_ontrack(event) {
     document.getElementById('remote_stream').srcObject = event.streams[0];
 }
 
+function handle_onremovetrack(event) {
+    var stream = document.getElementById('remote_stream').srcObject;
+    var track_list = stream.getTracks();
+
+    if (track_list.length == 0) {
+        stop();
+    }
+}
+
 function handle_ice_connection_state_change(event) {
     switch (peer_connection.iceConnectionState) {
         case 'closed':
@@ -44,7 +54,6 @@ function handle_push_offer(sdp){
     if (peer_connection == null) {
         create_peer_connection();
     }
-    var remote_stream = null;
 
     var remote_description = new RTCSessionDescription(sdp);
     peer_connection.setRemoteDescription(remote_description).then(function() {
@@ -72,7 +81,8 @@ function stop() {
     var remote_stream = document.getElementById('remote_stream');
     if (peer_connection) {
         peer_connection.onicecandidate = null;
-        peer_connection.onaddstream = null;
+        peer_connection.ontrack = null;
+        peer_connection.onremovetrack = null;
         peer_connection.oniceconnectionstatechange = null;
 
         if (remote_stream.srcObject) {
