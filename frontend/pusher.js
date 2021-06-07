@@ -4,6 +4,7 @@ const room_id = '123';
 
 let socket = io(SIGNALING_SERVER_URL, { autoConnect: true });
 var peer_connection = null;
+var local_stream = null;
 
 var media_constraints = {
     video: { width: 1280, height: 720 }
@@ -13,14 +14,15 @@ function create_peer_connection() {
     if (peer_connection == null) {
         console.log('create new peer connection');
         peer_connection = new RTCPeerConnection(PC_CONFIG);
-        peer_connection.onnegotiationneeded = handle_negotiation;
+        // peer_connection.onnegotiationneeded = handle_negotiation;
         peer_connection.onicecandidate = handle_icecandidate;
         peer_connection.oniceconnectionstatechange = handle_ice_connection_state_change;
         peer_connection.onsignalingstatechange = handle_signal_state_change;
+        local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
     }
 }
 
-function handle_negotiation() {
+function send_offer() {
     peer_connection.createOffer().then(function(offer) {
         return peer_connection.setLocalDescription(offer);
     }).then(function() {
@@ -31,6 +33,18 @@ function handle_negotiation() {
         socket.emit('data', data);
     })
 }
+
+// function handle_negotiation() {
+//     peer_connection.createOffer().then(function(offer) {
+//         return peer_connection.setLocalDescription(offer);
+//     }).then(function() {
+//         const data = {
+//             type: 'push_offer',
+//             sdp: peer_connection.localDescription
+//         };
+//         socket.emit('data', data);
+//     })
+// }
 
 function handle_icecandidate(event) {
     if (event.candidate) {
@@ -44,7 +58,7 @@ function handle_icecandidate(event) {
 }
 
 function handle_ice_connection_state_change(event) {
-    console.log('ICE state change');
+    console.log('ICE state change: ', peer_connection.iceConnectionState);
     switch (peer_connection.iceConnectionState) {
         case 'closed':
         case 'failed':
@@ -54,7 +68,7 @@ function handle_ice_connection_state_change(event) {
 }
 
 function handle_signal_state_change(event) {
-    console.log('Signal state change');
+    console.log('Signal state change:', peer_connection.signalingState);
     switch (peer_connection.signalingState) {
         case 'closed':
             stop();
@@ -124,14 +138,23 @@ socket.on('connected', () => {
 
 socket.on('ready', () => {
     console.log('ready');
-    create_peer_connection();
+    // create_peer_connection();
+    // navigator.mediaDevices.getUserMedia(media_constraints)
+    // .then(function(local_stream) {
+    //     console.log(local_stream)
+    //     if (document.getElementById('local_stream').srcObject == null) {
+    //         document.getElementById('local_stream').srcObject = local_stream;
+    //     }
+    //     local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
+    // })
+    // .catch(handle_get_user_media_error);
     navigator.mediaDevices.getUserMedia(media_constraints)
-    .then(function(local_stream) {
-        console.log(local_stream)
-        if (document.getElementById('local_stream').srcObject == null) {
-            document.getElementById('local_stream').srcObject = local_stream;
-        }
-        local_stream.getTracks().forEach(track => peer_connection.addTrack(track, local_stream));
+    .then(function(stream) {
+        console.log(stream);
+        local_stream = stream;
+        document.getElementById('local_stream').srcObject = local_stream;
+        create_peer_connection();
+        send_offer();
     })
     .catch(handle_get_user_media_error);
 

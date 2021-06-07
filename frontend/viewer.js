@@ -12,6 +12,7 @@ function create_peer_connection() {
         peer_connection.ontrack = handle_ontrack;
         peer_connection.onremovetrack = handle_onremovetrack;
         peer_connection.oniceconnectionstatechange = handle_ice_connection_state_change;
+        peer_connection.onsignalingstatechange = handle_signal_state_change;
     }
 }
 
@@ -33,6 +34,7 @@ function handle_ontrack(event) {
 }
 
 function handle_onremovetrack(event) {
+    console.log('remove track');
     var stream = document.getElementById('remote_stream').srcObject;
     var track_list = stream.getTracks();
 
@@ -42,9 +44,19 @@ function handle_onremovetrack(event) {
 }
 
 function handle_ice_connection_state_change(event) {
+    console.log('ICE state change: ', peer_connection.iceConnectionState);
     switch (peer_connection.iceConnectionState) {
         case 'closed':
         case 'failed':
+            stop();
+            break;
+    }
+}
+
+function handle_signal_state_change(event) {
+    console.log('Signal state change:', peer_connection.signalingState);
+    switch (peer_connection.signalingState) {
+        case 'closed':
             stop();
             break;
     }
@@ -78,21 +90,23 @@ function handle_new_ice_candidate(candidate) {
 }
 
 function stop() {
+    console.log('stop viewing');
     var remote_stream = document.getElementById('remote_stream');
     if (peer_connection) {
         peer_connection.onicecandidate = null;
         peer_connection.ontrack = null;
         peer_connection.onremovetrack = null;
         peer_connection.oniceconnectionstatechange = null;
+        peer_connection.onsignalingstatechange = null;
 
-        if (remote_stream.srcObject) {
-            remote_stream.srcObject.getTracks().forEach(track => track.stop());
-        }
+        // if (remote_stream.srcObject) {
+        //     remote_stream.srcObject.getTracks().forEach(track => track.stop());
+        // }
 
         peer_connection.close();
         peer_connection = null;
     }
-    remote_stream.removeAttribute('src');
+    // remote_stream.removeAttribute('src');
     remote_stream.removeAttribute('srcObject');
 }
 
@@ -113,6 +127,7 @@ socket.on('ready', () => {
 });
 
 socket.on('peer_left', (data) => {
+    console.log('peer left');
     stop();
 });
 
