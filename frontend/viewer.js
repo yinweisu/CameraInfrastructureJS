@@ -63,10 +63,6 @@ function handle_signal_state_change(event) {
 }
 
 function handle_push_offer(sdp){
-    if (peer_connection == null) {
-        create_peer_connection();
-    }
-
     var remote_description = new RTCSessionDescription(sdp);
     peer_connection.setRemoteDescription(remote_description).then(function() {
         return peer_connection.createAnswer();
@@ -119,6 +115,7 @@ socket.on('connected', () => {
         'role': 'viewer', 'room_id': '123'
     };
     socket.emit('join', data);
+    generateQRCode();
 });
 
 socket.on('ready', () => {
@@ -149,3 +146,12 @@ socket.on('data', (data) => {
             break;
     }
 });
+
+function generateQRCode() {
+    var qr_url = 'https://localhost:7000/pusher.html';
+    var qr = new QRious({
+        element: document.getElementById('pusher_qr_code'),
+        size: 300,
+        value: qr_url
+    });
+}
